@@ -1,10 +1,3 @@
-// eigenface.c, by Robin Hewitt, 2007
-//
-// Example program showing how to implement eigenface with OpenCV
-
-// Usage:
-
-
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -53,129 +46,97 @@ void comp_mean();
 //
 void main()
 {
-    char sel;
-	initPathDet(faceCascadePath,eyeCascadePath);
-   
-	printf("≠n∂i¶Ê§U¶C¶Û∫ÿæﬁß@:\nT:•˝ßÏ®˙æA∑Ì§H¡yºvπ≥,∂i¶Ê∞VΩm \nI:™Ω±µ∞VΩm\nE:µ≤ßÙ\n");
-    scanf("%c",&sel);
+	char sel;
+	printf("Ë¶ÅÈÄ≤Ë°å‰∏ãÂàó‰ΩïÁ®ÆÊìç‰Ωú:\nT:ÂÖàÊäìÂèñÈÅ©Áï∂‰∫∫ËáâÂΩ±ÂÉè,ÈÄ≤Ë°åË®ìÁ∑¥ \nI:Áõ¥Êé•Ë®ìÁ∑¥\nE:ÁµêÊùü\n");
+	scanf("%c", &sel);
 
-	if(sel!='T' && sel!='I'&& sel!='i'&& sel!='t') 
-	{
-		printf("µ≤ßÙ");
+	if (sel != 'T' && sel != 'I'&& sel != 'i' && sel != 't') {
+		initPathDet(faceCascadePath, eyeCascadePath);
+		learn(sel);
+		closeFaceDet();
+	}
+	else {
+		printf("ÁµêÊùü");
 		exit(0);
 	}
-	else
-	{
-		learn(sel);
-	}
-    closeFaceDet();
 }
-
-
 //////////////////////////////////
 // learn()
 //
 void learn(char sel)
 {
 	int i, offset;
-	CvRect* face=0;
+	CvRect* face = NULL;
 	int human,*number;
 
 	// load training data
 	nTrainFaces = loadFaceImgArray("train.txt",sel);
-	if( nTrainFaces < 2 )
-	{
+	if( nTrainFaces < 2 ) {
 		fprintf(stderr,
-		        "Need 2 or more training faces\n"
-		        "Input file contains only %d\n", nTrainFaces);
+		"Need 2 or more training faces\n"
+		"Input file contains only %d\n", nTrainFaces);
 		return;
 	}
-    
-	//printf("§@¶@≠nøÎª{¥X≠”§H:\n");
-	//scanf("%d",&human);
 	
-	human=3;
-    number= (int*)cvAlloc( human*sizeof(int) );
-	thres_eachdata=cvCreateMat(1,human, CV_32FC1 );
-	//tvalue= (double*)cvAlloc( human*sizeof(double) );
-
-	//printf("Ω–øÈ§J•L≠Ã™∫æ«∏π\n");
-    
-	for(i=0; i<human; i++)
-	{
-		number[i]=i+1;
-		//scanf("%d\n",&number[i],);
+	// the number of training people 
+	human = 3;
+	number = (int*)cvAlloc( human*sizeof(int) );
+	thres_eachdata = cvCreateMat(1, human, CV_32FC1 );
+	
+	for (i = 0; i < human; i++) {
+		number[i] = i+1;
 	}
 
-	if( (sel=='T') || (sel=='t'))
-	{
-		
-		  for(i=0; i<nTrainFaces; i++)
-		  { 
-		    cvNamedWindow("faceImg",1);
-            faceImgArr[i]=cvCreateImage(cvSize(112,96),IPL_DEPTH_8U,1);
-	        face=face_detect(pFaceImg[i],faceImgArr[i]);
+	if ((sel =='T') || (sel =='t')) {
+		for(i = 0; i<nTrainFaces; i++) { 
+			faceImgArr[i] = cvCreateImage(cvSize(112,96), IPL_DEPTH_8U, 1);
+			face = face_detect(pFaceImg[i], faceImgArr[i]);
+			
+			while(!face) { 
 				
-			while(!face){ 
-					
 				printf("\t%d can not recognize!!\n"
-					   "\tface detection  failed\n",i+1);
-            	i++;
-				if(i<nTrainFaces)
-				{
-					faceImgArr[i]=cvCreateImage(cvSize(112,96),IPL_DEPTH_8U,1);
-					face=face_detect(pFaceImg[i],faceImgArr[i]);
+				"\tface detection  failed\n",i+1);
+				i++;
+				if (i < nTrainFaces) {
+					faceImgArr[i] = cvCreateImage(cvSize(112,96), IPL_DEPTH_8U, 1);
+					face=face_detect(pFaceImg[i], faceImgArr[i]);
 					if(face)  break;
 				}
 				else return;
 			}
-
-              cvShowImage("faceImg",faceImgArr[i]);
-			  cvWaitKey(0);
-              cvDestroyWindow("faceImg");
-		   }
+		}
 	}
 	// do PCA on the training faces
 	doPCA();
-
 	// project the training images onto the PCA subspace
 	projectedTrainFaceMat = cvCreateMat( nTrainFaces, nEigens, CV_32FC1 );
-	offset = projectedTrainFaceMat->step / sizeof(float);
-	for(i=0; i<nTrainFaces; i++)
+	int offset = projectedTrainFaceMat->step / sizeof(float);
+	for(i = 0; i < nTrainFaces; i++)
 	{
-		//int offset = i * nEigens;
 		cvEigenDecomposite(
-			faceImgArr[i],
-			nEigens,
-			eigenVectArr,
-			0, 0,
-			pAvgTrainImg,
-			//projectedTrainFaceMat->data.fl + i*nEigens);
-			projectedTrainFaceMat->data.fl + i*offset);
+		faceImgArr[i],
+		nEigens,
+		eigenVectArr,
+		0, 0,
+		pAvgTrainImg,
+		projectedTrainFaceMat->data.fl + i*offset);
 	}
 	
-    double t3=(double)cvGetTickCount();
-	sing_class_dist(human,number);
-	thre_alldata=allthreshold();
-	t3=(double)cvGetTickCount()-t3;
-	printf("find max value = %gms\n",t3/((double)cvGetTickFrequency()*1000.));
+	sing_class_dist(human, number);
+	thre_alldata = allthreshold();
 
-	 //store the recognition data as an xml file
-    storeTrainingData();
+	// store the recognition data as an xml file
+	storeTrainingData();
+	ReleaseFaceImgArray(sel);
 }
-
-
 //////////////////////////////////
 // storeTrainingData()
 //
 void storeTrainingData()
 {
 	CvFileStorage * fileStorage;
-	int i;
-
 	// create a file-storage interface
 	fileStorage = cvOpenFileStorage( "facedata.xml", 0, CV_STORAGE_WRITE );
-
 	// store all the data
 	cvWriteInt( fileStorage, "nEigens", nEigens );
 	cvWriteInt( fileStorage, "nTrainFaces", nTrainFaces );
@@ -184,24 +145,19 @@ void storeTrainingData()
 	cvWrite(fileStorage, "projectmedian", projectmedian, cvAttrList(0,0));
 	cvWrite(fileStorage, "projectmedian_eachclass",projectedaverage, cvAttrList(0,0));
 	cvWrite(fileStorage, "trainPersonNumMat", personNumTruthMat, cvAttrList(0,0));
-    cvWrite(fileStorage, "PersonName", personName, cvAttrList(0,0));
+	cvWrite(fileStorage, "PersonName", personName, cvAttrList(0,0));
 	cvWrite(fileStorage, "eigenValMat", eigenValMat, cvAttrList(0,0));
 	cvWrite(fileStorage, "projectedTrainFaceMat", projectedTrainFaceMat, cvAttrList(0,0));
 	cvWrite(fileStorage, "avgTrainImg", pAvgTrainImg, cvAttrList(0,0));
 
-	for(i=0; i<nEigens; i++)
-	{
+	for(int i = 0; i < nEigens; i++) {
 		char varname[200];
 		sprintf( varname, "eigenVect_%d", i );
 		cvWrite(fileStorage, varname, eigenVectArr[i], cvAttrList(0,0));
 	}
-
 	// release the file-storage interface
 	cvReleaseFileStorage( &fileStorage );
 }
-
-
-
 //////////////////////////////////
 // doPCA()
 //
@@ -212,17 +168,17 @@ void doPCA()
 	CvSize faceImgSize;
 
 	// set the number of eigenvalues to use
-	nEigens = nTrainFaces-1;
+	nEigens = nTrainFaces - 1;
 
 	// allocate the eigenvector images
 	faceImgSize.width  = faceImgArr[0]->width;
 	faceImgSize.height = faceImgArr[0]->height;
 	eigenVectArr = (IplImage**)cvAlloc(sizeof(IplImage*) * nEigens);
 	for(i=0; i<nEigens; i++)
-		eigenVectArr[i] = cvCreateImage(faceImgSize, IPL_DEPTH_32F, 1);
+	eigenVectArr[i] = cvCreateImage(faceImgSize, IPL_DEPTH_32F, 1);
 
 	// allocate the eigenvalue array
-    eigenValMat = cvCreateMat( 1, nEigens, CV_32FC1 );
+	eigenValMat = cvCreateMat( 1, nEigens, CV_32FC1 );
 
 	// allocate the averaged image
 	pAvgTrainImg = cvCreateImage(faceImgSize, IPL_DEPTH_32F, 1);
@@ -232,32 +188,38 @@ void doPCA()
 
 	// compute average image, eigenvalues, and eigenvectors
 	cvCalcEigenObjects(
-		nTrainFaces,
-		(void*)faceImgArr,
-		(void*)eigenVectArr,
-		CV_EIGOBJ_NO_CALLBACK,
-		0,
-		0,
-		&calcLimit,
-		pAvgTrainImg,
-		eigenValMat->data.fl);
+	nTrainFaces,
+	(void*)faceImgArr,
+	(void*)eigenVectArr,
+	CV_EIGOBJ_NO_CALLBACK,
+	0,
+	0,
+	&calcLimit,
+	pAvgTrainImg,
+	eigenValMat->data.fl);
 
 	cvNormalize(eigenValMat, eigenValMat, 1, 0, CV_L1, 0);
 }
 
-
+void ReleaseFaceImgArray(char * filename, char sel) 
+{
+	for(int iFace=0; iFace < nFaces; iFace++) {
+		if (sel =='T'||sel == 't')
+			cvReleaseImage(&pFaceImg[iFace]);
+		cvReleaseImage(&faceImgArr[iFace]);
+	}
+}
 //////////////////////////////////
 // loadFaceImgArray()
 //
-int loadFaceImgArray(char * filename,char sel)
+int loadFaceImgArray(char * filename, char sel)
 {
-	FILE * imgListFile = 0;
+	FILE * imgListFile = NULL;
 	char imgFilename[512];
-	int iFace, nFaces=0,offset=0;
+	int iFace, nFaces = 0,offset = 0;
 
 	// open the input file
-	if( !(imgListFile = fopen(filename, "r")) )
-	{
+	if( !(imgListFile = fopen(filename, "r")) ) {
 		fprintf(stderr, "Can\'t open file %s\n", filename);
 		return 0;
 	}
@@ -266,99 +228,83 @@ int loadFaceImgArray(char * filename,char sel)
 	while( fgets(imgFilename, 512, imgListFile) ) ++nFaces;
 	rewind(imgListFile);
 
-	// allocate the face-image array,person number,person name matrix
-	if(sel=='T'||sel=='t')  
-	pFaceImg= (IplImage **)cvAlloc( nFaces*sizeof(IplImage *) );
-    faceImgArr= (IplImage **)cvAlloc( nFaces*sizeof(IplImage *) );
+	// allocate the face-image array, person number, person name matrix
+	if(sel =='T' || sel=='t')  
+		pFaceImg = (IplImage **)cvAlloc( nFaces*sizeof(IplImage *) );
+	faceImgArr = (IplImage **)cvAlloc( nFaces*sizeof(IplImage *) );
 	personNumTruthMat = cvCreateMat( 1, nFaces, CV_32SC1 );
-	personName=  cvCreateMat( nFaces, nFaces, CV_32FC4 );
+	personName =  cvCreateMat( nFaces, nFaces, CV_32FC4 );
 
 	// store the face images in an array
-	for(iFace=0; iFace<nFaces; iFace++)
-	{
-		// read person number and name of image file
-        offset=iFace*sizeof(personName->data)+offset;
-		fscanf(imgListFile,
-			"%d %s %s", personNumTruthMat->data.i+iFace,personName->data.s+offset, imgFilename);
+	for(iFace=0; iFace<nFaces; iFace++) {
 		
+		// read person number and name of image file
+		offset = iFace*sizeof(personName->data)+offset;
+		fscanf(imgListFile,
+		"%d %s %s", personNumTruthMat->data.i+iFace,personName->data.s+offset, imgFilename);
 
 		// load the face image
-		if(sel=='T'||sel=='t')
-		{
-			
+		if (sel =='T'||sel == 't') {
 			pFaceImg[iFace] = cvLoadImage((char*)imgFilename,0);
-				
-			if( !pFaceImg[iFace])
-			{
+			if( !pFaceImg[iFace]) {
 				fprintf(stderr, "Can\'t load image from %s\n", imgFilename);
 				return 0;
 			}
-	    }
-		else{
-		    
+		} else {
 			faceImgArr[iFace] = cvLoadImage((char*)imgFilename,0);
-				
-			if( !faceImgArr[iFace])
-			{
+			if( !faceImgArr[iFace]) {
 				fprintf(stderr, "Can\'t load image from %s\n", imgFilename);
 				return 0;
 			}
 		}
 	}
-
 	fclose(imgListFile);
-
 	return nFaces;
 }
 //////////////////////////////////
-// allthreshold():compute threshod of dataset in order to recognize stranger
+// allthreshold() : compute threshold of dataset in order to recognize stranger
 // return value:   
-//             type: double  
-//             function:class max
+//   double :  threshold of dataset
 double allthreshold()
 {
-	int i,k,*oringinal_index,mid,index;
-	double distSq=0,*dist_ave,median,max;
-    double* oringinal_ave;
- 
-	oringinal_index=(int*)cvAlloc(nTrainFaces*sizeof(int) );
-    dist_ave=(double*)cvAlloc(nTrainFaces*sizeof(double) );
-    oringinal_ave=(double*)cvAlloc(nTrainFaces*sizeof(double) );
-    projectmedian = cvCreateMat(1,nEigens, CV_32FC1 );
+	int i, k, mid, index
+	double distSq = 0, , median,max;
 
-   	//find mean of dataset   
-    comp_mean();
+	int *oringinal_index = (int*)cvAlloc(nTrainFaces*sizeof(int) );
+	double* dist_ave = (double*)cvAlloc(nTrainFaces*sizeof(double) );
+	double* oringinal_ave = (double*)cvAlloc(nTrainFaces*sizeof(double) );
+	projectmedian = cvCreateMat(1,nEigens, CV_32FC1 );
 
-	//compute distant from any point to mean
+	// find mean of dataset   
+	comp_mean();
+
+	// compute distant from any point to mean
 	for(i=0;i<nTrainFaces;i++)
 	{
-        distSq=0;
+		distSq=0;
 		for(k=0; k<nEigens; k++)
 		{
-     	    float d_i=projectedTrainFaceMat->data.fl[i*nEigens + k]-projectmedian->data.fl[k];
+			float d_i=projectedTrainFaceMat->data.fl[i*nEigens + k]-projectmedian->data.fl[k];
 			distSq += d_i*d_i; // Euclidean
-      	}
-	    
-		dist_ave[i]=sqrt(distSq);
-	    oringinal_ave[i]=dist_ave[i];
-        oringinal_index[i]=i;	
+		}
+		
+		dist_ave[i] = sqrt(distSq);
+		oringinal_ave[i] =d ist_ave[i];
+		oringinal_index[i] = i;	
 	} 
 	
 	//quick sort
-	k=nTrainFaces-1;
+	k = nTrainFaces-1;
 	quick_sort(dist_ave,0,k,nTrainFaces);
 	
-	if(nTrainFaces%2==0)
-	{
-	   mid=(nTrainFaces/2);		  
-	}
-	else
-	{
-	   mid=((nTrainFaces+1)/2);	
+	if (nTrainFaces%2 == 0) {
+		mid = (nTrainFaces/2);		  
+	} else {
+		mid = ((nTrainFaces+1)/2);	
 	}  
 
-	median= dist_ave[mid];
-	max=dist_ave[k];
+	median = dist_ave[mid];
+	max = dist_ave[k];
 	printf("\nthe number of data:%d\n",nTrainFaces);
 	printf("maximum:%f\nmean value:%f\n",dist_ave[k],median);
 
@@ -367,142 +313,115 @@ double allthreshold()
 	{
 		if( oringinal_ave[i]==median)
 		{
-		 index=i;		
+			index=i;		
 		}
 	}
 	
-	for(k=0; k<nEigens; k++)
-	{ 
-	  projectmedian->data.fl[k]=projectedTrainFaceMat->data.fl[index*nEigens + k];	 
+	for(k = 0; k < nEigens; k++) { 
+		projectmedian->data.fl[k] = projectedTrainFaceMat->data.fl[index*nEigens + k];	 
 	}   
 
-	//compute distant from any point to median
-	for(i=0;i<nTrainFaces;i++)
-	{
-		distSq=0;
-		for(k=0; k<nEigens; k++)
-		{
+	// compute distant from any point to median
+	for(i = 0; i < nTrainFaces; i++) {
+		distSq = 0;
+		for(k = 0; k < nEigens; k++) {
 			float d_i =	projectedTrainFaceMat->data.fl[i*nEigens + k]-projectmedian->data.fl[k];
 			distSq += d_i*d_i; // Euclidean	
 		}	 
-		dist_ave[i]=sqrt(distSq);
-		oringinal_ave[i]=sqrt(distSq);
-		oringinal_index[i]=i;	
+		dist_ave[i] = sqrt(distSq);
+		oringinal_ave[i] =s qrt(distSq);
+		oringinal_index[i] = i;	
 	} 
 	
-	//quick sort
-	k=nTrainFaces-1;
-	quick_sort(dist_ave,0,k,nTrainFaces);
+	// quick sort
+	k = nTrainFaces-1;
+	quick_sort(dist_ave, 0, k, nTrainFaces);
 	
-	for(i=0;i<nTrainFaces;i++)
-	{
-      printf("\n\t%f",dist_ave[i]);	
-	} 
-    printf("\n");
-
-	if(nTrainFaces%2==0)
-	{
-	   mid=(nTrainFaces/2);		  
-	}
-	else
-	{
-	   mid=((nTrainFaces+1)/2);	
+	if( nTrainFaces %2 == 0) {
+		mid = (nTrainFaces/2);		  
+	} else {
+		mid = ((nTrainFaces+1)/2);	
 	}  
-   
-	k=3*(nTrainFaces-1)/4;
-	median= dist_ave[mid];
-	max=dist_ave[k];
-	printf("\nthe number of data:%d\n",nTrainFaces);
-	printf("maximum:%f\nmedian value:%f\n",dist_ave[k],median);
 
+	k = 3*(nTrainFaces-1)/4;
+	median = dist_ave[mid];
+	max = dist_ave[k];
+	printf("\nthe number of data:%d\n", nTrainFaces);
+	printf("maximum:%f\nmedian value:%f\n", dist_ave[k], median);
 	printf("\nmaximum value:%f\n", max);
 
-
-	//release momory
+	// release momory
 	cvFree(&dist_ave);
-    cvFree(&oringinal_ave);
+	cvFree(&oringinal_ave);
+	cvFree(&oringinal_index)
 	return max;
 }
 
 //////////////////////////////////
 // computedistant()
 //
-double computedistant(int human,int iTrain)
+double computedistant(int human, int iTrain)
 {
-	int i;
-    double distSq=0;
-
-	for(i=0; i<nEigens; i++)
-	{
-		float d_i =	projectedTrainFaceMat->data.fl[iTrain*nEigens + i]-projectedaverage->data.fl[human*nEigens+i];
-		distSq += d_i*d_i; // Euclidean
-				
+	double distSq = 0;
+	for(int i=0; i < nEigens; i++) {
+		float d_i =	projectedTrainFaceMat->data.fl[iTrain*nEigens + i] - projectedaverage->data.fl[human*nEigens + i];
+		distSq += d_i * d_i; // Euclidean	
 	}
-     return distSq;
+	return distSq;
 }
-
 void quick_sort(double *A,int left,int right,int k)
 {
-    int low,upper; 
-    double point;
+	int low,upper; 
+	double point;
 
-    if(left < right) 
-	{ 
-        point = A[left]; 
-        low = left; 
-        upper = right+1; 
+	if (left < right) { 
+		point = A[left]; 
+		low = left; 
+		upper = right+1; 
 
-        while(1) 
-		{ 
-            while(A[++low] < point) ;    // ¶V•kß‰ 
-            while(A[--upper] > point) ;  // ¶V•™ß‰ 
-            if(low >= upper) 
-                break; 
-            swap(&A[low], &A[upper]); 
-        } 
+		while(1) { 
+			while (A[++low] < point) ;    // ÂêëÂè≥Êâæ 
+			while (A[--upper] > point) ;  // ÂêëÂ∑¶Êâæ 
+			if (low >= upper) 
+				break; 
+			swap(&A[low], &A[upper]); 
+		} 
 
-        A[left] = A[upper]; 
-        A[upper] = point; 
-  
-        quick_sort(A, left, upper-1,k);   // πÔ•™√‰∂i¶Êªº∞j 
-        quick_sort(A, upper+1, right,k);  // πÔ•k√‰∂i¶Êªº∞j 
-    } 		
+		A[left] = A[upper]; 
+		A[upper] = point; 
+
+		quick_sort(A, left, upper-1,k);   // Â∞çÂ∑¶ÈÇäÈÄ≤Ë°åÈÅûËø¥ 
+		quick_sort(A, upper+1, right,k);  // Â∞çÂè≥ÈÇäÈÄ≤Ë°åÈÅûËø¥ 
+	} 		
 }
-
 void swap(double *a,double *b)
 {
 	double temp;
-	temp=*a;
-	*a=*b;
-	*b=temp;
+	temp = *a;
+	*a = *b;
+	*b = temp;
 }
 //////////////////////////////////
 // comp_avg():compute distant from any point to mean
 //
-void comp_aver(int *clanum,int *number,double *dist_ave,double *oringinal_ave,int *oringinal_index,int human)
+void comp_aver(int *clanum, int *number, double *dist_ave, double *oringinal_ave, int *oringinal_index, int human)
 {
-	int i,j,k=0,mtemp=0;
-	double temp2=0;
+	int mtemp=0;
 
-	for(j=0; j<human; j++)
-	{
-	   	int temp1,temp;
-		temp=clanum[j];
-	    temp1=number[j];
+	for (int j = 0; j<human; j++) {
+		int temp = clanum[j];
+		int temp1 = number[j];
 		
-		for(i=0,k=0;k<temp,i<nTrainFaces;i++)
-	   {
- 			 if((temp1==personNumTruthMat->data.i[i]))
-			 {
-				 temp2=computedistant(j,i);
-				 dist_ave[mtemp+k]=sqrt(temp2);
-				 oringinal_ave[mtemp+k]=sqrt(temp2);
-				 oringinal_index[mtemp+k]=i;
-				 k++;
-			  } 
-			
-	   } 
-	   mtemp+=temp;
+		for(int i = 0,k = 0;k < temp ,i < nTrainFaces; i++) {
+			if ((temp1 == personNumTruthMat->data.i[i])) {
+				double temp2 = computedistant(j,i);
+				dist_ave[mtemp+k] = sqrt(temp2);
+				oringinal_ave[mtemp+k] = sqrt(temp2);
+				oringinal_index[mtemp+k]=i;
+				k++;
+			} 			
+		} 
+		mtemp += temp;
 	}
 }
 //////////////////////////////////
@@ -510,195 +429,151 @@ void comp_aver(int *clanum,int *number,double *dist_ave,double *oringinal_ave,in
 //
 void sing_class_dist(int human,int *number)
 {
-	int i,j,*clanum,k,mtemp,*index,*oringinal_index;
-	double distSq=0,*dist_ave,*median;
-    double* oringinal_ave;
-    
-	oringinal_index=(int*)cvAlloc(nTrainFaces*sizeof(int) );
-	index=(int*)cvAlloc( human*sizeof(int) );
-	clanum=(int*)cvAlloc( human*sizeof(int) );
-    dist_ave=(double*)cvAlloc(nTrainFaces*sizeof(double) );
-    oringinal_ave=(double*)cvAlloc(nTrainFaces*sizeof(double) );
-    projectedaverage = cvCreateMat( human, nEigens, CV_32FC1 );
-	median=(double*)cvAlloc( human*sizeof(double*) );
+	int i, j, k, mtemp;
+	double distSq = 0;
+	
+	int *oringinal_index = (int*)cvAlloc( nTrainFaces*sizeof(int) );
+	int *index = (int*)cvAlloc( human*sizeof(int) );
+	int *clanum = (int*)cvAlloc( human*sizeof(int) );
+	double *dist_ave=(double*)cvAlloc(nTrainFaces*sizeof(double) );
+	double *oringinal_ave=(double*)cvAlloc(nTrainFaces*sizeof(double) );
+	double *median=(double*)cvAlloc( human*sizeof(double*) );
+	projectedaverage = cvCreateMat( human, nEigens, CV_32FC1 );
+
 
 	//count the number of each class 
-	for(j=0; j<human; j++)
-	{
-		int temp=0,temp1;
-		temp1=number[j];
-		float value=0;
-		   
-		for(i=0; i<nTrainFaces; i++)
-		{
-			if(temp1== personNumTruthMat->data.i[i])
-			{
-			   temp++;
+	for (j = 0; j < human; j++) {
+		int temp = 0;
+		int temp1 = number[j];
+		float value = 0;
+		
+		for(i = 0; i < nTrainFaces; i++) {
+			if(temp1 == personNumTruthMat->data.i[i]) {
+				temp++;
 			} 
-		 }  
-		 clanum[j]=temp;
-  	 }
-   	
-     printf("\n");
-	//find mean of each class    
-    for(j=0; j<human; j++)
-	{
-	   int temp1;
-	   temp1=number[j];
-	 
-	   for(k=0; k<nEigens; k++)
-	   {
-		   double value=0.00;
-	       float comp_val=0;
+		}  
+		clanum[j]=temp;
+	}
+	
+	// find mean of each person    
+	for(j = 0; j < human; j++) {
+		int temp1 = number[j];
+		for(k = 0; k < nEigens; k++) {
+			double value	= 0.00;
+			float comp_val	=  0.00;
 
-		   for(i=0; i<nTrainFaces; i++)
-		   {
-				if(temp1== personNumTruthMat->data.i[i])
-				{
-					value+=projectedTrainFaceMat->data.fl[i*nEigens + k];
-				
+			for(i = 0; i < nTrainFaces; i++) {
+				if (temp1 == personNumTruthMat->data.i[i]) {
+					value += projectedTrainFaceMat->data.fl[i*nEigens + k];
 				} 
-		   } 
-           comp_val=(float)(value/clanum[j]); 	
-		   projectedaverage->data.fl[j*nEigens+k]=comp_val;	 
+			} 
+			comp_val = (float)(value/clanum[j]); 	
+			projectedaverage->data.fl[j*nEigens+k] = comp_val;	 
 		}
 	}
 
 	//compute distant from any point to mean
-	comp_aver(clanum,number,dist_ave,oringinal_ave,oringinal_index,human);
-   
+	comp_aver(clanum,number, dist_ave, oringinal_ave, oringinal_index,human);
+
 	// sort data with quick sort
-	mtemp=0;
-	for(j=0; j<human; j++)
+	mtemp = 0;
+	for(j = 0; j < human; j++)
 	{
-		int temp,left,right,mid=0;
-		temp=clanum[j];
-		left=mtemp;
-		right=left+temp-1;
+		int mid = 0;
+		int temp = clanum[j];
+		int left = mtemp;
+		int right = left + temp - 1;
 
+		quick_sort(dist_ave, left, right, temp);
 
-		quick_sort(dist_ave,left,right,temp);
-
-
-		if(temp%2==0)
-		{
-		   mid=((right-left)/2);		  
-		}
-		else
-		{
-		   mid=((right-left+1)/2);	
+		if (temp %2 == 0) {
+			mid=((right-left)/2);		  
+		} else {
+			mid=((right-left+1)/2);	
 		}  
-        //
-		median[j]= dist_ave[(left+mid)];
-		thres_eachdata->data.db[j]=dist_ave[ right];
-		printf("\nnumber:%d\nthe number of data:%d\n",number[j],temp);
-		printf("maximum:%f\nmedian value:%f\n",dist_ave[right],median[j]);
-		mtemp+=temp;
+		
+		median[j] = dist_ave[(left + mid)];
+		thres_eachdata->data.db[j] = dist_ave[right];
+		printf("\nnumber:%d\nthe number of data:%d\n", number[j], temp);
+		printf("maximum:%f\nmedian value:%f\n", dist_ave[right], median[j]);
+		mtemp += temp;
 	}
 	
-	mtemp=0;
-	for(j=0;j<human;j++)
-	{ 
-		int temp,left,right;
-		temp=clanum[j];
-		left=mtemp;
-		right=left+temp-1;
-		double med=median[j];
+	mtemp = 0;
+	for(j = 0; j < human; j++) { 
+		int temp = clanum[j];
+		int left = mtemp;
+		int right = left+temp-1;
+		double med = median[j];
 
-		for(k=left; k<=right;k++)
-		{
-			if( oringinal_ave[k]==med)
-			{
-			 index[j]=k;		
+		for(k = left; k <= right; k++) {
+			if (oringinal_ave[k] == med) {
+				index[j]=k;		
 			}
 		}
-	    mtemp+=temp;
-	   
-	 }
-	
-	//find median of each class    
-    for(j=0; j<human; j++)
-	{
-	   int temp1,temp,key;
-	   key=index[j];
-	   temp=oringinal_index[key];
-	   temp1=number[j];
-	 
-	   for(k=0; k<nEigens; k++)
-	   { 
-		   projectedaverage->data.fl[j*nEigens+k]=projectedTrainFaceMat->data.fl[temp*nEigens + k];	 
-	   }   
-	
-	}
-   
-	//compute distant from any point to median
-    comp_aver(clanum,number,dist_ave,oringinal_ave,oringinal_index,human);
-
-	printf("\n®C§@¬I®Ï§§∂°≠»™∫∂Z¬˜,®M©w¡{¨…≠»\n");
-	
-	// quick sort
-	mtemp=0;
-	for(j=0; j<human; j++)
-	{
-		int temp,left,right,mid=0,mid75=0;
-		temp=clanum[j];
-		left=mtemp;
-		right=left+temp-1;
-
-
-		quick_sort(dist_ave,left,right,temp);
-	
-		for(i=mtemp;i<=right;i++)
-		{
-			printf("\n\t%f",dist_ave[i]);	
-		} 
-
-		if(temp%2==0)
-		{
-		   mid=((right-left)/2);
-		   
-		}
-		else
-		{
-		   mid=((right-left+1)/2);	
-		}  
-       
-	    k=3*(right-left)/4;
-		median[j]= dist_ave[(left+mid)];
-		thres_eachdata->data.fl[j]=(float)(dist_ave[left+k]);
-		printf("\nnumber:%d\nthe number of data:%d\n",number[j],temp);
-		printf("maximum:%f\nmedian value:%f\n",thres_eachdata->data.fl[j],median[j]);
 		mtemp+=temp;
 	}
+	
+	//find median of each face    
+	for(j = 0; j < human; j++) {
+		int key = index[j];
+		int temp = oringinal_index[key];
+		int temp1 = number[j];
+		
+		for( k=0; k < nEigens; k++) { 
+			projectedaverage->data.fl[j*nEigens+k] = projectedTrainFaceMat->data.fl[temp*nEigens + k];	 
+		}   
+	}
 
-	//release momory
+	// compute distant from any point to median
+	comp_aver(clanum,number, dist_ave, oringinal_ave, oringinal_index,human);
+
+	// quick sort
+	printf("\nÊØè‰∏ÄÈªûÂà∞‰∏≠ÈñìÂÄºÁöÑË∑ùÈõ¢,Ê±∫ÂÆöËá®ÁïåÂÄº\n");
+	mtemp = 0;
+	for(j = 0; j < human; j++) {
+		int mid = 0, mid75=0;
+		int temp = clanum[j];
+		int left = mtemp;
+		int right = left + temp - 1;
+
+		quick_sort(dist_ave, left, right, temp);
+		
+		if (temp % 2 == 0) {
+			mid = ((right-left)/2);
+		} else{
+			mid = ((right-left+1)/2);	
+		}  
+		
+		k = 3*(right-left)/4;
+		median[j] = dist_ave[(left+mid)];
+		thres_eachdata->data.fl[j] = (float)(dist_ave[left+k]);
+		printf("\nnumber : %d\nthe number of data : %d\n",number[j],temp);
+		printf("maximum : %f\nmedian value : %f\n",thres_eachdata->data.fl[j],median[j]);
+		mtemp += temp;
+	}
+
+	// release momory
+	cvFree(&index);
+	cvFree(&oringinal_index);
 	cvFree(&clanum);
 	cvFree(&dist_ave);
 	cvFree(&median);
-    cvFree(&oringinal_ave);
-	cvFree(&index);
+	cvFree(&oringinal_ave);
 }
 //////////////////////////////////
-//comp_mean():compute mean of dataset 
+//comp_mean(): compute mean of dataset 
 //
 void comp_mean()
 {
-	int i,k;
-	CvMat *proj_temp=0;
-    CvScalar g;
-
-    proj_temp=cvCreateMat(1,nTrainFaces,CV_32FC1);	
+	CvScalar g;
+	CvMat *proj_temp = cvCreateMat(1,nTrainFaces,CV_32FC1);	
 	
-	for(k=0; k<nEigens;k++)
-	{		  
-	   float temp;
-			  
-	   for(i=0;i<nTrainFaces;i++) 
-	   {	  				   
-		   proj_temp->data.fl[i]=projectedTrainFaceMat->data.fl[i*nEigens + k];
-	   } 
-        g=cvAvg(proj_temp,0);
-	    temp=(float)(g.val[0]/nTrainFaces);
-		projectmedian->data.fl[k]=temp;
+	for(int k = 0; k < nEigens; k++) {		  
+		for(int i=0;i<nTrainFaces;i++) {	  				   
+			proj_temp->data.fl[i] = projectedTrainFaceMat->data.fl[i*nEigens + k];
+		} 
+		g = cvAvg(proj_temp,0);
+		projectmedian->data.fl[k] = (float)(g.val[0]/nTrainFaces);
 	}
 }
