@@ -50,7 +50,7 @@ void main()
 	printf("要進行下列何種操作:\nT:先抓取適當人臉影像,進行訓練 \nI:直接訓練\nE:結束\n");
 	scanf("%c", &sel);
 
-	if (sel != 'T' && sel != 'I'&& sel != 'i' && sel != 't') {
+	if (sel != 'T' || sel != 'I' || sel != 'i' || sel != 't') {
 		initPathDet(faceCascadePath, eyeCascadePath);
 		learn(sel);
 		closeFaceDet();
